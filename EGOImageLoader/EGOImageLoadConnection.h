@@ -36,7 +36,13 @@
 	NSURLConnection* _connection;
 	NSTimeInterval _timeoutInterval;
 	
-	id<EGOImageLoadConnectionDelegate> _delegate;
+#if __has_feature(objc_arc_weak)
+	id <EGOImageLoadConnectionDelegate> __weak _delegate;
+#elif __has_feature(objc_arc)
+	id <EGOImageLoadConnectionDelegate> __unsafe_unretained _delegate;
+#else
+	id <EGOImageLoadConnectionDelegate> _delegate;
+#endif
 }
 
 - (id)initWithImageURL:(NSURL*)aURL delegate:(id)delegate;

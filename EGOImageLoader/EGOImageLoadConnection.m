@@ -28,21 +28,21 @@
 
 
 @implementation EGOImageLoadConnection
-@synthesize imageURL=_imageURL, response=_response, delegate=_delegate, timeoutInterval=_timeoutInterval;
+@synthesize imageURL=_imageURL, response=_response, delegate, timeoutInterval=_timeoutInterval;
 
 #if __EGOIL_USE_BLOCKS
 @synthesize handlers;
 #endif
 
-- (id)initWithImageURL:(NSURL*)aURL delegate:(id)delegate {
+- (id)initWithImageURL:(NSURL*)aURL delegate:(id)aDelegate {
 	if((self = [super init])) {
-		_imageURL = [aURL retain];
-		self.delegate = delegate;
-		_responseData = [[NSMutableData alloc] init];
+		_imageURL = PS_RETAIN(aURL);
+		self.delegate = aDelegate;
+		_responseData = [NSMutableData new];
 		self.timeoutInterval = 30;
 		
 		#if __EGOIL_USE_BLOCKS
-		handlers = [[NSMutableDictionary alloc] init];
+		handlers = [NSMutableDictionary new];
 		#endif
 	}
 	
@@ -55,7 +55,8 @@
 															timeoutInterval:self.timeoutInterval];
 	[request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];  
 	_connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
-	[request release];
+    
+    PS_RELEASE_NIL(request);
 }
 
 - (void)cancel {
@@ -100,11 +101,13 @@
 	#if __EGOIL_USE_BLOCKS
 	[handlers release], handlers = nil;
 	#endif
-
-	[_connection release];
-	[_imageURL release];
-	[_responseData release];
-	[super dealloc];
+    
+#if !__has_feature(objc_arc)
+    [_connection release]; _connection = nil;
+    [_imageURL release]; _imageURL = nil;
+    [_responseData release]; _responseData = nil;
+    [super dealloc];
+#endif
 }
 
 @end

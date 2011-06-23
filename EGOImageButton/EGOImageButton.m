@@ -25,7 +25,7 @@
 //
 
 #import "EGOImageButton.h"
-
+#import "EGOCache.h"
 
 @implementation EGOImageButton
 @synthesize imageURL, placeholderImage, delegate;
@@ -45,10 +45,9 @@
 }
 
 - (void)setImageURL:(NSURL *)aURL {
-	if(imageURL) {
+	if (imageURL) {
 		[[EGOImageLoader sharedImageLoader] removeObserver:self forURL:imageURL];
-		[imageURL release];
-		imageURL = nil;
+        EGO_RELEASE_NIL(imageURL);
 	}
 	
 	if(!aURL) {
@@ -56,7 +55,7 @@
 		imageURL = nil;
 		return;
 	} else {
-		imageURL = [aURL retain];
+		imageURL = EGO_RETAIN(aURL);
 	}
 	
 	UIImage* anImage = [[EGOImageLoader sharedImageLoader] imageForURL:aURL shouldLoadWithObserver:self];
@@ -99,10 +98,12 @@
 #pragma mark -
 - (void)dealloc {
 	[[EGOImageLoader sharedImageLoader] removeObserver:self];
-	
-	self.imageURL = nil;
-	self.placeholderImage = nil;
+    
+    EGO_RELEASE_NIL(imageURL);
+    EGO_RELEASE_NIL(placeholderImage);
+#if !__has_feature(objc_arc)
     [super dealloc];
+#endif
 }
 
 @end

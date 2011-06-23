@@ -26,6 +26,7 @@
 
 #import "EGOImageView.h"
 #import "EGOImageLoader.h"
+#import "EGOCache.h"
 
 @implementation EGOImageView
 @synthesize imageURL, placeholderImage, delegate;
@@ -44,10 +45,9 @@
 }
 
 - (void)setImageURL:(NSURL *)aURL {
-	if(imageURL) {
+	if (imageURL) {
 		[[EGOImageLoader sharedImageLoader] removeObserver:self forURL:imageURL];
-		[imageURL release];
-		imageURL = nil;
+        EGO_RELEASE_NIL(imageURL);
 	}
 	
 	if(!aURL) {
@@ -55,7 +55,7 @@
 		imageURL = nil;
 		return;
 	} else {
-		imageURL = [aURL retain];
+        imageURL = EGO_RETAIN(aURL);
 	}
 
 	[[EGOImageLoader sharedImageLoader] removeObserver:self];
@@ -99,9 +99,12 @@
 #pragma mark -
 - (void)dealloc {
 	[[EGOImageLoader sharedImageLoader] removeObserver:self];
-	self.imageURL = nil;
-	self.placeholderImage = nil;
+    
+#if !__has_feature(objc_arc)
+    EGO_RELEASE_NIL(imageURL);
+    EGO_RELEASE_NIL(placeholderImage);
     [super dealloc];
+#endif
 }
 
 @end

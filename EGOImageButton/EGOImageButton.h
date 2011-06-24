@@ -28,21 +28,16 @@
 #import "EGOImageLoader.h"
 
 @protocol EGOImageButtonDelegate;
-@interface EGOImageButton : UIButton<EGOImageLoaderObserver> {
-@private
-	NSURL* imageURL;
-	UIImage* placeholderImage;
-	id<EGOImageButtonDelegate> delegate;
-}
+@interface EGOImageButton : UIButton <EGOImageLoaderObserver>
 
 - (id)initWithPlaceholderImage:(UIImage*)anImage; // delegate:nil
 - (id)initWithPlaceholderImage:(UIImage*)anImage delegate:(id<EGOImageButtonDelegate>)aDelegate;
 
 - (void)cancelImageLoad;
 
-@property(nonatomic,retain) NSURL* imageURL;
-@property(nonatomic,retain) UIImage* placeholderImage;
-@property(nonatomic,retain) id<EGOImageButtonDelegate> delegate;
+@property(nonatomic, retain) NSURL* imageURL;
+@property(nonatomic, retain) UIImage* placeholderImage;
+@property(nonatomic, ego_weak) id<EGOImageButtonDelegate> delegate;
 @end
 
 @protocol EGOImageButtonDelegate<NSObject>

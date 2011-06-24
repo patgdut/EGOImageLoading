@@ -46,25 +46,35 @@
 
 - (void)setImageURL:(NSURL *)aURL {
 	if (imageURL) {
-		[[EGOImageLoader sharedImageLoader] removeObserver:self forURL:imageURL];
-        EGO_RELEASE_NIL(imageURL);
+        [self cancelImageLoad];
+        self.imageURL = nil;
 	}
 	
 	if(!aURL) {
 		[self setImage:self.placeholderImage forState:UIControlStateNormal];
-		imageURL = nil;
+		self.imageURL = nil;
 		return;
 	} else {
-		imageURL = EGO_RETAIN(aURL);
+        self.imageURL = aURL;
 	}
+    
+    [[EGOImageLoader sharedImageLoader] loadImageForURL:aURL completion:^(UIImage *theImage, NSURL *theImageURL, NSError *theError) {
+        if (![self.imageURL isEqual:theImageURL]) return;
+        
+        if (theError && [self.delegate respondsToSelector:@selector(imageButtonFailedToLoadImage:error:)]) {
+            [self.delegate imageButtonFailedToLoadImage:self error:theError];
+            return;
+        }
+        
+        [self setImage:theImage forState:UIControlStateNormal];
+        [self setNeedsDisplay];
+        
+        if ([self.delegate respondsToSelector:@selector(imageButtonLoadedImage:)]) {
+            [self.delegate imageButtonLoadedImage:self];
+        }	 
+    }];
 	
-	UIImage* anImage = [[EGOImageLoader sharedImageLoader] imageForURL:aURL shouldLoadWithObserver:self];
-	
-	if(anImage) {
-		[self setImage:anImage forState:UIControlStateNormal];
-	} else {
-		[self setImage:self.placeholderImage forState:UIControlStateNormal];
-	}
+	[self setImage:self.placeholderImage forState:UIControlStateNormal];
 }
 
 #pragma mark -
@@ -72,38 +82,14 @@
 
 - (void)cancelImageLoad {
 	[[EGOImageLoader sharedImageLoader] cancelLoadForURL:self.imageURL];
-	[[EGOImageLoader sharedImageLoader] removeObserver:self forURL:self.imageURL];
-}
-
-- (void)imageLoaderDidLoad:(NSNotification*)notification {
-	if(![[[notification userInfo] objectForKey:@"imageURL"] isEqual:self.imageURL]) return;
-	
-	UIImage* anImage = [[notification userInfo] objectForKey:@"image"];
-	[self setImage:anImage forState:UIControlStateNormal];
-	[self setNeedsDisplay];
-	
-	if([self.delegate respondsToSelector:@selector(imageButtonLoadedImage:)]) {
-		[self.delegate imageButtonLoadedImage:self];
-	}	
-}
-
-- (void)imageLoaderDidFailToLoad:(NSNotification*)notification {
-	if(![[[notification userInfo] objectForKey:@"imageURL"] isEqual:self.imageURL]) return;
-	
-	if([self.delegate respondsToSelector:@selector(imageButtonFailedToLoadImage:error:)]) {
-		[self.delegate imageButtonFailedToLoadImage:self error:[[notification userInfo] objectForKey:@"error"]];
-	}
 }
 
 #pragma mark -
-- (void)dealloc {
-	[[EGOImageLoader sharedImageLoader] removeObserver:self];
-    
-    EGO_RELEASE_NIL(imageURL);
-    EGO_RELEASE_NIL(placeholderImage);
-#if !__has_feature(objc_arc)
-    [super dealloc];
-#endif
+
+- (void)dealloc {    
+    EGO_DEALLOC_NIL(self.imageURL);
+    EGO_DEALLOC_NIL(self.placeholderImage);
+    EGO_DEALLOC();
 }
 
 @end

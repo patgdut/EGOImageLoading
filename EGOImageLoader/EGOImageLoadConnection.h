@@ -24,25 +24,14 @@
 //  THE SOFTWARE.
 //
 
-#import <Foundation/Foundation.h>
+#import "EGOCache.h"
 
 @protocol EGOImageLoadConnectionDelegate;
 
 @interface EGOImageLoadConnection : NSObject {
 @private
-	NSURL* _imageURL;
-	NSURLResponse* _response;
 	NSMutableData* _responseData;
 	NSURLConnection* _connection;
-	NSTimeInterval _timeoutInterval;
-	
-#if __has_feature(objc_arc_weak)
-	id <EGOImageLoadConnectionDelegate> __weak _delegate;
-#elif __has_feature(objc_arc)
-	id <EGOImageLoadConnectionDelegate> __unsafe_unretained _delegate;
-#else
-	id <EGOImageLoadConnectionDelegate> _delegate;
-#endif
 }
 
 - (id)initWithImageURL:(NSURL*)aURL delegate:(id)delegate;
@@ -54,13 +43,11 @@
 @property(nonatomic,readonly,getter=imageURL) NSURL* imageURL;
 
 @property(nonatomic,retain) NSURLResponse* response;
-@property(nonatomic,assign) id<EGOImageLoadConnectionDelegate> delegate;
+@property(nonatomic,ego_weak) id <EGOImageLoadConnectionDelegate> delegate;
 
 @property(nonatomic,assign) NSTimeInterval timeoutInterval; // Default is 30 seconds
 
-#if __EGOIL_USE_BLOCKS
 @property(nonatomic,readonly) NSMutableDictionary* handlers;
-#endif
 
 @end
 

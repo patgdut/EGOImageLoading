@@ -28,22 +28,15 @@
 
 
 @implementation EGOImageLoadConnection
-@synthesize imageURL=_imageURL, response=_response, delegate, timeoutInterval=_timeoutInterval;
-
-#if __EGOIL_USE_BLOCKS
-@synthesize handlers;
-#endif
+@synthesize imageURL, response, delegate, timeoutInterval, handlers, responseData = _responseData;
 
 - (id)initWithImageURL:(NSURL*)aURL delegate:(id)aDelegate {
 	if((self = [super init])) {
-		_imageURL = PS_RETAIN(aURL);
+        PS_SET_RETAINED(imageURL, aURL);
 		self.delegate = aDelegate;
 		_responseData = [NSMutableData new];
 		self.timeoutInterval = 30;
-		
-		#if __EGOIL_USE_BLOCKS
-		handlers = [NSMutableDictionary new];
-		#endif
+        handlers = [NSMutableDictionary new];
 	}
 	
 	return self;
@@ -63,51 +56,40 @@
 	[_connection cancel];	
 }
 
-- (NSData*)responseData {
-	return _responseData;
-}
-
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
 	if(connection != _connection) return;
 	[_responseData appendData:data];
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
-	if(connection != _connection) return;
-	self.response = response;
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)aResponse {
+	if (connection != _connection) return;
+	self.response = aResponse;
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
 	if(connection != _connection) return;
 
-	if([self.delegate respondsToSelector:@selector(imageLoadConnectionDidFinishLoading:)]) {
+	if([self.delegate respondsToSelector:@selector(imageLoadConnectionDidFinishLoading:)])
 		[self.delegate imageLoadConnectionDidFinishLoading:self];
-	}
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
 	if(connection != _connection) return;
 
-	if([self.delegate respondsToSelector:@selector(imageLoadConnection:didFailWithError:)]) {
+	if([self.delegate respondsToSelector:@selector(imageLoadConnection:didFailWithError:)])
 		[self.delegate imageLoadConnection:self didFailWithError:error];
-	}
 }
 
-
 - (void)dealloc {
-	self.response = nil;
-	self.delegate = nil;
-	
-	#if __EGOIL_USE_BLOCKS
-	[handlers release], handlers = nil;
-	#endif
+    EGO_DEALLOC_NIL(self.response);
+    EGO_DEALLOC_NIL(self.delegate);
     
-#if !__has_feature(objc_arc)
-    [_connection release]; _connection = nil;
-    [_imageURL release]; _imageURL = nil;
-    [_responseData release]; _responseData = nil;
-    [super dealloc];
-#endif
+    EGO_RELEASE(handlers);
+    EGO_RELEASE(_connection);
+    EGO_RELEASE(imageURL);
+    EGO_RELEASE(_responseData);
+    
+    EGO_DEALLOC();
 }
 
 @end

@@ -30,7 +30,6 @@
 
 @interface EGOImageLoader : NSObject {
 @private
-	dispatch_queue_t _operationQueue;
 	NSLock* connectionsLock;
 }
 

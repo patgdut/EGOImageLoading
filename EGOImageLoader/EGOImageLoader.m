@@ -28,7 +28,19 @@
 #import "EGOImageLoadConnection.h"
 #import "EGOCache.h"
 
-static EGOImageLoader* __imageLoader;
+static EGOImageLoader *__imageLoader;
+static dispatch_queue_t EGOILOperationQueue = NULL;
+
+static dispatch_queue_t GetEGOILOperationQueue() {
+    static dispatch_once_t queueCreationPredicate = 0;
+    dispatch_once(&queueCreationPredicate, ^{
+        EGOILOperationQueue = dispatch_queue_create("com.enormego.EGOImageLoader", 0);
+        dispatch_queue_t priority = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
+		dispatch_set_target_queue(priority, EGOILOperationQueue);
+    });
+    return EGOILOperationQueue;
+}
+
 
 inline static NSString* keyForURL(NSURL* url, NSString* style) {
 	if(style) {
@@ -38,11 +50,8 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 	}
 }
 
-#define kNoStyle @"EGOImageLoader-nostyle"
 #define kCompletionsKey @"completions"
 #define kStylerKey @"styler"
-#define kStylerQueue _operationQueue
-#define kCompletionsQueue dispatch_get_main_queue()
 
 @interface EGOImageLoader ()
 - (void)handleCompletionsForConnection:(EGOImageLoadConnection*)connection image:(UIImage*)image error:(NSError*)error;
@@ -54,21 +63,16 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 
 + (EGOImageLoader*)sharedImageLoader {
 	@synchronized(self) {
-		if(!__imageLoader) {
+		if (!__imageLoader)
 			__imageLoader = [[[self class] alloc] init];
-		}
 	}
-	
 	return __imageLoader;
 }
 
 - (id)init {
-	if((self = [super init])) {
+	if ((self = [super init])) {
 		connectionsLock = [NSLock new];
-		self.currentConnections = [NSMutableDictionary new];
-		_operationQueue = dispatch_queue_create("com.enormego.EGOImageLoader",NULL);
-		dispatch_queue_t priority = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
-		dispatch_set_target_queue(priority, _operationQueue);
+		self.currentConnections = [NSMutableDictionary dictionary];
 	}	
 	return self;
 }
@@ -118,10 +122,8 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 		[self.currentConnections setObject:connection forKey:aURL];
 		[connectionsLock unlock];
 		[connection performSelector:@selector(start) withObject:nil afterDelay:0.01];
-        
-        EGO_RELEASE(connection);
 		
-		return connection;
+		return EGO_AUTORELEASE(connection);
 	}
 }
 
@@ -134,36 +136,29 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 
 	if(anImage) {
 		completion(anImage, aURL, nil);
-	} else if(!anImage && styler && style && (anImage = [[EGOCache currentCache] imageForKey:keyForURL(aURL,nil)])) {
-		dispatch_async(kStylerQueue, ^{
+	} else if (!anImage && styler && style && (anImage = [[EGOCache currentCache] imageForKey:keyForURL(aURL,nil)])) {
+		dispatch_async(GetEGOILOperationQueue(), ^{
 			UIImage* image = styler(anImage);
 			[[EGOCache currentCache] setImage:image forKey:keyForURL(aURL, style) withTimeoutInterval:604800];
-			dispatch_async(kCompletionsQueue, ^{
+			dispatch_async(dispatch_get_main_queue(), ^{
 				completion(image, aURL, nil);
 			});
 		});
 	} else {
-		EGOImageLoadConnection* connection = [self loadImageForURL:aURL];
-		void (^completionCopy)(UIImage* image, NSURL* imageURL, NSError* error) = [completion copy];
-		
-		NSString* handlerKey = style ? style : kNoStyle;
+		EGOImageLoadConnection* connection = [self loadImageForURL:aURL];		
+		NSString *handlerKey = style ? style : @"EGOImageLoader-nostyle";
 		NSMutableDictionary* handler = [connection.handlers objectForKey:handlerKey];
 		
-		if(!handler) {
-			handler = [[NSMutableDictionary alloc] initWithCapacity:2];
+		if (!handler) {
+            handler = [NSMutableDictionary dictionaryWithCapacity:2];
 			[connection.handlers setObject:handler forKey:handlerKey];
-            EGO_RELEASE(handler);
 
 			[handler setObject:[NSMutableArray arrayWithCapacity:1] forKey:kCompletionsKey];
-			if (styler) {
-				UIImage *(^stylerCopy)(UIImage* image) = [styler copy];
-				[handler setObject:stylerCopy forKey:kStylerKey];
-                EGO_RELEASE(stylerCopy);
-			}
+			if (styler)
+                [handler setObject:EGO_AUTORELEASE([styler copy]) forKey:kStylerKey];
 		}
 		
-		[[handler objectForKey:kCompletionsKey] addObject:completionCopy];
-		EGO_RELEASE(completionCopy);
+		[[handler objectForKey:kCompletionsKey] addObject:EGO_AUTORELEASE([completion copy])];
 	}
 }
 
@@ -200,7 +195,7 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 	NSURL* imageURL = connection.imageURL;
 	
 	void (^callCompletions)(UIImage* anImage, NSArray* completions) = ^(UIImage* anImage, NSArray* completions) {
-		dispatch_async(kCompletionsQueue, ^{
+		dispatch_async(dispatch_get_main_queue(), ^{
 			for(void (^completion)(UIImage* image, NSURL* imageURL, NSError* error) in completions) {
 				completion(anImage, connection.imageURL, error);
 			}
@@ -211,7 +206,7 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 		NSDictionary* handler = [connection.handlers objectForKey:styleKey];
 		UIImage* (^styler)(UIImage* image) = [handler objectForKey:kStylerKey];
 		if(!error && image && styler) {
-			dispatch_async(kStylerQueue, ^{
+			dispatch_async(GetEGOILOperationQueue(), ^{
 				UIImage* anImage = styler(image);
 				[[EGOCache currentCache] setImage:anImage forKey:keyForURL(imageURL, styleKey) withTimeoutInterval:604800];
 				callCompletions(anImage, [handler objectForKey:kCompletionsKey]);
@@ -223,7 +218,6 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 }
 
 - (void)dealloc {
-    dispatch_release(_operationQueue), _operationQueue = nil;
     PS_DEALLOC_NIL(self.currentConnections);
     PS_RELEASE_NIL(connectionsLock);
     PS_DEALLOC();

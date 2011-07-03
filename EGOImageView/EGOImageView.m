@@ -28,8 +28,21 @@
 #import "EGOImageLoader.h"
 #import "EGOCache.h"
 
+@interface EGOImageView ()
+
+@property (nonatomic,retain) UIImageView *placeholderView;
+
+- (void)showPlaceholderView;
+- (void)hidePlaceholderView;
+
+@end
+
 @implementation EGOImageView
-@synthesize imageURL, placeholderImage, delegate;
+
+@synthesize imageURL;
+@synthesize placeholderImage;
+@synthesize delegate;
+@synthesize placeholderView;
 
 - (id)initWithPlaceholderImage:(UIImage*)anImage {
 	return [self initWithPlaceholderImage:anImage delegate:nil];	
@@ -39,9 +52,18 @@
 	if((self = [super initWithImage:anImage])) {
 		self.placeholderImage = anImage;
 		self.delegate = aDelegate;
+		[self showPlaceholderView];
 	}
 	
 	return self;
+}
+
+- (void)dealloc {
+    EGO_DEALLOC_NIL(self.imageURL);
+    EGO_DEALLOC_NIL(self.placeholderImage);
+	EGO_DEALLOC_NIL(self.placeholderView);
+	
+    EGO_DEALLOC();
 }
 
 - (void)setImageURL:(NSURL *)aURL {
@@ -53,6 +75,7 @@
 	if(!aURL) {
 		self.image = self.placeholderImage;
         self.imageURL = nil;
+		[self showPlaceholderView];
 		return;
 	} else {
         self.imageURL = aURL;
@@ -67,6 +90,7 @@
         }
         
         self.image = theImage;
+		[self hidePlaceholderView];
         [self setNeedsDisplay];
         
         if ([self.delegate respondsToSelector:@selector(imageViewLoadedImage:)]) {
@@ -81,10 +105,23 @@
 	[[EGOImageLoader sharedImageLoader] cancelLoadForURL:self.imageURL];
 }
 
-- (void)dealloc {
-    EGO_DEALLOC_NIL(self.imageURL);
-    EGO_DEALLOC_NIL(self.placeholderImage);
-    EGO_DEALLOC();
+- (void)showPlaceholderView {
+	if (self.placeholderView == nil) {
+		self.placeholderView = [[[UIImageView alloc] initWithFrame:self.bounds] autorelease];
+		self.placeholderView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+		self.placeholderView.image = anImage;
+
+		[self addSubview:self.placeholderView];
+	}
+}
+
+- (void)hidePlaceholderView {
+	[UIView animateWithDuration:0.4 animations:^(void) {
+	            self.placeholderView.alpha = 0.0f;
+	        } completion:^(BOOL finished) {
+	            [self.placeholderView removeFromSuperview];
+				self.placeholderView = nil;
+	        }];
 }
 
 @end

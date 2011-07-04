@@ -26,7 +26,6 @@
 
 #import "EGOImageLoadConnection.h"
 
-
 @implementation EGOImageLoadConnection
 @synthesize imageURL, response, delegate, timeoutInterval, handlers, responseData = _responseData;
 
@@ -81,15 +80,15 @@
 }
 
 - (void)dealloc {
-    EGO_DEALLOC_NIL(self.response);
-    EGO_DEALLOC_NIL(self.delegate);
+    PS_DEALLOC_NIL(self.response);
+    PS_DEALLOC_NIL(self.delegate);
     
-    EGO_RELEASE(handlers);
-    EGO_RELEASE(_connection);
-    EGO_RELEASE(imageURL);
-    EGO_RELEASE(_responseData);
+    PS_RELEASE(handlers);
+    PS_RELEASE(_connection);
+    PS_RELEASE(imageURL);
+    PS_RELEASE(_responseData);
     
-    EGO_DEALLOC();
+    PS_DEALLOC();
 }
 
 @end

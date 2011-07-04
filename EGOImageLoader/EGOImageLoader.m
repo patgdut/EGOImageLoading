@@ -123,7 +123,7 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 		[connectionsLock unlock];
 		[connection performSelector:@selector(start) withObject:nil afterDelay:0.01];
 		
-		return EGO_AUTORELEASE(connection);
+		return PS_AUTORELEASE(connection);
 	}
 }
 
@@ -154,11 +154,12 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 			[connection.handlers setObject:handler forKey:handlerKey];
 
 			[handler setObject:[NSMutableArray arrayWithCapacity:1] forKey:kCompletionsKey];
-			if (styler)
-                [handler setObject:EGO_AUTORELEASE([styler copy]) forKey:kStylerKey];
+			if (styler) {
+                [handler setObject:PS_AUTORELEASE([styler copy]) forKey:kStylerKey];
+            }
 		}
 		
-		[[handler objectForKey:kCompletionsKey] addObject:EGO_AUTORELEASE([completion copy])];
+		[[handler objectForKey:kCompletionsKey] addObject:PS_AUTORELEASE([completion copy])];
 	}
 }
 

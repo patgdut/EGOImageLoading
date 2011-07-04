@@ -87,9 +87,9 @@
 #pragma mark -
 
 - (void)dealloc {    
-    EGO_DEALLOC_NIL(self.imageURL);
-    EGO_DEALLOC_NIL(self.placeholderImage);
-    EGO_DEALLOC();
+    PS_DEALLOC_NIL(self.imageURL);
+    PS_DEALLOC_NIL(self.placeholderImage);
+    PS_DEALLOC();
 }
 
 @end

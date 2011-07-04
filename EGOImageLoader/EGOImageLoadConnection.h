@@ -43,7 +43,7 @@
 @property(nonatomic,readonly,getter=imageURL) NSURL* imageURL;
 
 @property(nonatomic,retain) NSURLResponse* response;
-@property(nonatomic,ego_weak) id <EGOImageLoadConnectionDelegate> delegate;
+@property(nonatomic,ps_weak) id <EGOImageLoadConnectionDelegate> delegate;
 
 @property(nonatomic,assign) NSTimeInterval timeoutInterval; // Default is 30 seconds
 

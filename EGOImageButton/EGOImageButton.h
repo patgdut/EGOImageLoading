@@ -37,7 +37,7 @@
 
 @property(nonatomic, retain) NSURL* imageURL;
 @property(nonatomic, retain) UIImage* placeholderImage;
-@property(nonatomic, ego_weak) id<EGOImageButtonDelegate> delegate;
+@property(nonatomic, ps_weak) id<EGOImageButtonDelegate> delegate;
 @end
 
 @protocol EGOImageButtonDelegate<NSObject>

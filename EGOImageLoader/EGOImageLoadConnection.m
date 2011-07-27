@@ -26,16 +26,23 @@
 
 #import "EGOImageLoadConnection.h"
 
+@interface EGOImageLoadConnection ()
+@property (nonatomic, retain, readwrite) NSMutableData *responseData;
+@property (nonatomic, copy, readwrite, getter=imageURL) NSURL *imageURL;
+@property (nonatomic, retain, readwrite) NSMutableDictionary *handlers;
+@property (nonatomic, retain) NSURLConnection *connection;
+@end
+
 @implementation EGOImageLoadConnection
-@synthesize imageURL, response, delegate, timeoutInterval, handlers, responseData = _responseData;
+@synthesize imageURL, response, delegate, timeoutInterval, handlers, responseData, connection;
 
 - (id)initWithImageURL:(NSURL*)aURL delegate:(id)aDelegate {
 	if((self = [super init])) {
-        PS_SET_RETAINED(imageURL, aURL);
+        self.imageURL = aURL;
 		self.delegate = aDelegate;
-		_responseData = [NSMutableData new];
+        self.responseData = [NSMutableData data];
 		self.timeoutInterval = 30;
-        handlers = [NSMutableDictionary new];
+        self.handlers = [NSMutableDictionary dictionary];
 	}
 	
 	return self;
@@ -45,50 +52,51 @@
 	NSMutableURLRequest* request = [[NSMutableURLRequest alloc] initWithURL:self.imageURL
 																cachePolicy:NSURLRequestReturnCacheDataElseLoad
 															timeoutInterval:self.timeoutInterval];
-	[request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];  
-	_connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
+	[request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
     
-    PS_RELEASE_NIL(request);
+    NSURLConnection *newConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
+	self.connection = newConnection;
+    [newConnection release];
+    [request release];
 }
 
 - (void)cancel {
-	[_connection cancel];	
+	[self.connection cancel];	
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
-	if(connection != _connection) return;
-	[_responseData appendData:data];
+- (void)connection:(NSURLConnection *)aConnection didReceiveData:(NSData *)data {
+	if (aConnection != self.connection) return;
+	[self.responseData appendData:data];
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)aResponse {
-	if (connection != _connection) return;
+- (void)connection:(NSURLConnection *)aConnection didReceiveResponse:(NSURLResponse *)aResponse {
+	if (aConnection != self.connection) return;
 	self.response = aResponse;
 }
 
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-	if(connection != _connection) return;
+- (void)connectionDidFinishLoading:(NSURLConnection *)aConnection {
+	if (aConnection != self.connection) return;
 
 	if([self.delegate respondsToSelector:@selector(imageLoadConnectionDidFinishLoading:)])
 		[self.delegate imageLoadConnectionDidFinishLoading:self];
 }
 
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-	if(connection != _connection) return;
+- (void)connection:(NSURLConnection *)aConnection didFailWithError:(NSError *)error {
+	if (aConnection != self.connection) return;
 
 	if([self.delegate respondsToSelector:@selector(imageLoadConnection:didFailWithError:)])
 		[self.delegate imageLoadConnection:self didFailWithError:error];
 }
 
 - (void)dealloc {
-    PS_DEALLOC_NIL(self.response);
-    PS_DEALLOC_NIL(self.delegate);
+    self.response = nil;
+    self.delegate = nil;
+    self.handlers = nil;
+    self.imageURL = nil;
+    self.responseData = nil;
+    self.connection = nil;
     
-    PS_RELEASE(handlers);
-    PS_RELEASE(_connection);
-    PS_RELEASE(imageURL);
-    PS_RELEASE(_responseData);
-    
-    PS_DEALLOC();
+    [super dealloc];
 }
 
 @end

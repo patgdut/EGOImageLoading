@@ -55,11 +55,12 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 
 @interface EGOImageLoader ()
 - (void)handleCompletionsForConnection:(EGOImageLoadConnection*)connection image:(UIImage*)image error:(NSError*)error;
+@property (nonatomic, retain) NSLock *connectionsLock;
 @end
 
 @implementation EGOImageLoader
 
-@synthesize currentConnections;
+@synthesize currentConnections, connectionsLock;
 
 + (EGOImageLoader*)sharedImageLoader {
 	@synchronized(self) {
@@ -71,7 +72,7 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 
 - (id)init {
 	if ((self = [super init])) {
-		connectionsLock = [NSLock new];
+		self.connectionsLock = [[NSLock new] autorelease];
 		self.currentConnections = [NSMutableDictionary dictionary];
 	}	
 	return self;
@@ -82,7 +83,7 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 }
 
 - (void)cleanUpConnection:(EGOImageLoadConnection*)connection {
-	if(!connection.imageURL) return;
+	if (!connection.imageURL) return;
 	
 	connection.delegate = nil;
 	
@@ -110,21 +111,19 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 	[self cleanUpConnection:connection];
 }
 
-- (EGOImageLoadConnection*)loadImageForURL:(NSURL*)aURL {
-	EGOImageLoadConnection* connection;
+- (EGOImageLoadConnection *)loadImageForURL:(NSURL*)aURL {
+    if ((![self loadingConnectionForURL:aURL]))
+        return nil;
+    
+    EGOImageLoadConnection *connection = [[EGOImageLoadConnection alloc] initWithImageURL:aURL delegate:self];
 	
-	if ((connection = [self loadingConnectionForURL:aURL])) {
-		return connection;
-	} else {
-		connection = [[EGOImageLoadConnection alloc] initWithImageURL:aURL delegate:self];
-	
-		[connectionsLock lock];
-		[self.currentConnections setObject:connection forKey:aURL];
-		[connectionsLock unlock];
-		[connection performSelector:@selector(start) withObject:nil afterDelay:0.01];
-		
-		return PS_AUTORELEASE(connection);
-	}
+    [connectionsLock lock];
+    [self.currentConnections setObject:connection forKey:aURL];
+    [connectionsLock unlock];
+    [connection performSelector:@selector(start) withObject:nil afterDelay:0.01];
+    
+    [connection autorelease];
+    return connection;
 }
 
 - (void)loadImageForURL:(NSURL*)aURL completion:(void (^)(UIImage* image, NSURL* imageURL, NSError* error))completion {
@@ -155,11 +154,11 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 
 			[handler setObject:[NSMutableArray arrayWithCapacity:1] forKey:kCompletionsKey];
 			if (styler) {
-                [handler setObject:PS_AUTORELEASE([styler copy]) forKey:kStylerKey];
+                [handler setObject:[[styler copy] autorelease] forKey:kStylerKey];
             }
 		}
 		
-		[[handler objectForKey:kCompletionsKey] addObject:PS_AUTORELEASE([completion copy])];
+		[[handler objectForKey:kCompletionsKey] addObject:[[completion copy] autorelease]];
 	}
 }
 
@@ -219,9 +218,9 @@ inline static NSString* keyForURL(NSURL* url, NSString* style) {
 }
 
 - (void)dealloc {
-    PS_DEALLOC_NIL(self.currentConnections);
-    PS_RELEASE_NIL(connectionsLock);
-    PS_DEALLOC();
+    self.currentConnections = nil;
+    self.connectionsLock = nil;
+    [super dealloc];
 }
 
 @end

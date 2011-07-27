@@ -28,26 +28,22 @@
 
 @protocol EGOImageLoadConnectionDelegate;
 
-@interface EGOImageLoadConnection : NSObject {
-@private
-	NSMutableData* _responseData;
-	NSURLConnection* _connection;
-}
+@interface EGOImageLoadConnection : NSObject
 
-- (id)initWithImageURL:(NSURL*)aURL delegate:(id)delegate;
+@property (nonatomic, readonly, retain) NSMutableData *responseData;
+@property (nonatomic, readonly, copy, getter=imageURL) NSURL *imageURL;
+
+@property (nonatomic, retain) NSURLResponse *response;
+@property (nonatomic, assign) id <EGOImageLoadConnectionDelegate> delegate;
+
+@property (nonatomic, assign) NSTimeInterval timeoutInterval;
+
+@property (nonatomic, readonly, retain) NSMutableDictionary *handlers;
+
+- (id)initWithImageURL:(NSURL *)aURL delegate:(id)delegate;
 
 - (void)start;
 - (void)cancel;
-
-@property(nonatomic,readonly) NSData* responseData;
-@property(nonatomic,readonly,getter=imageURL) NSURL* imageURL;
-
-@property(nonatomic,retain) NSURLResponse* response;
-@property(nonatomic,ps_weak) id <EGOImageLoadConnectionDelegate> delegate;
-
-@property(nonatomic,assign) NSTimeInterval timeoutInterval; // Default is 30 seconds
-
-@property(nonatomic,readonly) NSMutableDictionary* handlers;
 
 @end
 

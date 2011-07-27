@@ -82,9 +82,9 @@
 }
 
 - (void)dealloc {
-    PS_DEALLOC_NIL(self.imageURL);
-    PS_DEALLOC_NIL(self.placeholderImage);
-    PS_DEALLOC();
+    self.imageURL = nil;
+    self.placeholderImage = nil;
+    [super dealloc];
 }
 
 @end

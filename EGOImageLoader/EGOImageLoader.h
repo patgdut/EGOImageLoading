@@ -28,14 +28,13 @@
 
 @protocol EGOImageLoaderObserver;
 
-@interface EGOImageLoader : NSObject {
-@private
-	NSLock* connectionsLock;
-}
+@interface EGOImageLoader : NSObject
 
 + (EGOImageLoader*)sharedImageLoader;
 
 - (BOOL)isLoadingImageURL:(NSURL*)aURL;
+
+@property (nonatomic,retain) NSMutableDictionary *currentConnections;
 
 - (void)loadImageForURL:(NSURL*)aURL completion:(void (^)(UIImage* image, NSURL* imageURL, NSError* error))completion;
 - (void)loadImageForURL:(NSURL*)aURL style:(NSString*)style styler:(UIImage* (^)(UIImage* image))styler completion:(void (^)(UIImage* image, NSURL* imageURL, NSError* error))completion;
@@ -46,7 +45,6 @@
 - (void)clearCacheForURL:(NSURL*)aURL;
 - (void)clearCacheForURL:(NSURL*)aURL style:(NSString*)style;
 
-@property (nonatomic,retain) NSMutableDictionary *currentConnections;
 @end
 
 @protocol EGOImageLoaderObserver<NSObject>

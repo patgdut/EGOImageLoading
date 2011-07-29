@@ -28,8 +28,17 @@
 #import "EGOImageLoader.h"
 #import "EGOCache.h"
 
+@interface EGOImageView ()
+
+@property (nonatomic, retain) UIImageView *placeholderView;
+
+- (void)showPlaceholderView;
+- (void)hidePlaceholderView;
+
+@end
+
 @implementation EGOImageView
-@synthesize imageURL, placeholderImage, delegate;
+@synthesize imageURL, placeholderImage, delegate, placeholderView;
 
 - (id)initWithPlaceholderImage:(UIImage*)anImage {
 	return [self initWithPlaceholderImage:anImage delegate:nil];	
@@ -52,10 +61,11 @@
 	
 	if(!aURL) {
 		self.image = self.placeholderImage;
-        self.imageURL = nil;
+		self.imageURL = nil;
+		[self showPlaceholderView];
 		return;
 	} else {
-        self.imageURL = aURL;
+		self.imageURL = aURL;
 	}
     
     [[EGOImageLoader sharedImageLoader] loadImageForURL:aURL completion:^(UIImage *theImage, NSURL *theImageURL, NSError *theError) {
@@ -67,6 +77,7 @@
         }
         
         self.image = theImage;
+	[self hidePlaceholderView];
         [self setNeedsDisplay];
         
         if ([self.delegate respondsToSelector:@selector(imageViewLoadedImage:)]) {
@@ -75,16 +86,40 @@
     }];
 	
 	self.image = self.placeholderImage;
+	[self showPlaceholderView];
 }
 
 - (void)cancelImageLoad {
 	[[EGOImageLoader sharedImageLoader] cancelLoadForURL:self.imageURL];
+	[self hidePlaceholderView];
 }
 
 - (void)dealloc {
     self.imageURL = nil;
     self.placeholderImage = nil;
+    self.placeholderView = nil;
     [super dealloc];
+}
+
+- (void)showPlaceholderView {
+	if (!self.placeholderView)
+		self.placeholderView = [[[UIImageView alloc] initWithFrame:self.bounds] autorelease];
+
+	self.placeholderView.frame = self.bounds;
+	self.placeholderView.autoresizingMask = self.autoresizingMask;
+	self.placeholderView.image = self.placeholderImage;
+
+	if (!self.placeholderView.superview)
+		[self addSubview:self.placeholderView];
+}
+
+- (void)hidePlaceholderView {
+	[UIView animateWithDuration:0.4 animations:^(void) {
+		self.placeholderView.alpha = 0.0f;
+	} completion:^(BOOL finished) {
+		[self.placeholderView removeFromSuperview];
+		self.placeholderView = nil;
+	}];
 }
 
 @end
